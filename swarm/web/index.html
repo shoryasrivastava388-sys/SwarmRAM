@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SwarmRAM - Distributed AI Memory Cluster</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0c0f17;
+            --surface: #141926;
+            --surface-card: #1c2336;
+            --border: #28324d;
+            --accent: #3b82f6;
+            --accent-glow: rgba(59, 130, 246, 0.25);
+            --green: #10b981;
+            --text-main: #f1f5f9;
+            --text-sub: #94a3b8;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: var(--bg);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .logo-badge {
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            color: white;
+            font-weight: 800;
+            padding: 0.4rem 0.75rem;
+            border-radius: 8px;
+            font-size: 1.1rem;
+        }
+
+        .app-title h1 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        .app-title p {
+            font-size: 0.8rem;
+            color: var(--text-sub);
+        }
+
+        .connection-pill {
+            background: var(--surface-card);
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            padding: 0.4rem 1rem;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--green);
+            box-shadow: 0 0 8px var(--green);
+        }
+
+        main {
+            flex: 1;
+            padding: 2rem;
+            max-width: 1300px;
+            margin: 0 auto;
+            width: 100%;
+            display: grid;
+            grid-template-columns: 1fr 1.3fr;
+            gap: 2rem;
+        }
+
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 0.75rem;
+        }
+
+        .card-header h2 {
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+        }
+
+        .stat-box {
+            background: var(--surface-card);
+            border: 1px solid var(--border);
+            padding: 1rem;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-num {
+            font-size: 1.6rem;
+            font-weight: 800;
+            color: #60a5fa;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: var(--text-sub);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-top: 0.25rem;
+        }
+
+        .node-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            max-height: 280px;
+            overflow-y: auto;
+        }
+
+        .node-item {
+            background: var(--surface-card);
+            border: 1px solid var(--border);
+            padding: 0.85rem 1rem;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .node-info h4 {
+            font-size: 0.95rem;
+            font-weight: 600;
+        }
+
+        .node-info p {
+            font-size: 0.75rem;
+            color: var(--text-sub);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .node-badge {
+            background: rgba(59, 130, 246, 0.15);
+            color: #93c5fd;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            padding: 0.25rem 0.6rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        /* Chat Panel */
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            height: 600px;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem;
+            background: var(--surface-card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .chat-bubble {
+            max-width: 85%;
+            padding: 0.85rem 1.1rem;
+            border-radius: 10px;
+            font-size: 0.92rem;
+            line-height: 1.5;
+        }
+
+        .user-bubble {
+            background: var(--accent);
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 2px;
+        }
+
+        .ai-bubble {
+            background: #252e45;
+            color: var(--text-main);
+            align-self: flex-start;
+            border-bottom-left-radius: 2px;
+            border: 1px solid var(--border);
+        }
+
+        .chat-input-area {
+            display: flex;
+            gap: 0.75rem;
+            margin-top: 1rem;
+        }
+
+        .chat-input {
+            flex: 1;
+            background: var(--surface-card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 0.85rem 1.1rem;
+            color: white;
+            font-family: inherit;
+            font-size: 0.95rem;
+            outline: none;
+        }
+
+        .chat-input:focus {
+            border-color: var(--accent);
+        }
+
+        .btn-send {
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            padding: 0 1.5rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.2s opacity;
+        }
+
+        .btn-send:hover {
+            opacity: 0.9;
+        }
+
+        .model-select {
+            background: var(--surface-card);
+            border: 1px solid var(--border);
+            color: white;
+            padding: 0.6rem 1rem;
+            border-radius: 8px;
+            font-family: inherit;
+            outline: none;
+            width: 100%;
+        }
+
+        .pipeline-visual {
+            background: #111624;
+            border: 1px dashed var(--border);
+            border-radius: 8px;
+            padding: 0.85rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: #60a5fa;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo-area">
+            <div class="logo-badge">⚡ SwarmRAM</div>
+            <div class="app-title">
+                <h1>Distributed AI Memory Cluster</h1>
+                <p>Pooling 4GB School Computers into a High-Performance Neural Swarm</p>
+            </div>
+        </div>
+        <div class="connection-pill">
+            <div class="status-dot"></div>
+            <span>Coordinator: <strong id="coord-ip">Detecting...</strong></span>
+        </div>
+    </header>
+
+    <main>
+        <!-- Left: Cluster Diagnostics & Controls -->
+        <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+            
+            <div class="card">
+                <div class="card-header">
+                    <h2>🧠 Pooled Neural Memory</h2>
+                    <span style="font-size: 0.8rem; color: var(--text-sub);">Live Metrics</span>
+                </div>
+                
+                <div class="stat-grid">
+                    <div class="stat-box">
+                        <div class="stat-num" id="stat-ram">0.0 GB</div>
+                        <div class="stat-label">Total Pooled RAM</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-num" id="stat-nodes">1</div>
+                        <div class="stat-label">Active Nodes</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-num" id="stat-status">READY</div>
+                        <div class="stat-label">Cluster State</div>
+                    </div>
+                </div>
+
+                <div class="pipeline-visual" id="pipeline-path">
+                    Pipeline Path: [Coordinator (Master)]
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2>💻 Connected Member Computers</h2>
+                    <button onclick="refreshCluster()" style="background:none; border:none; color:var(--accent); cursor:pointer; font-size:0.85rem;">🔄 Refresh</button>
+                </div>
+                
+                <div class="node-list" id="nodes-container">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2>📦 Model & Pipeline Manager</h2>
+                </div>
+                <div>
+                    <label style="font-size: 0.8rem; color: var(--text-sub); display: block; margin-bottom: 0.4rem;">Select GGUF Model:</label>
+                    <select class="model-select" id="model-dropdown">
+                        <option value="simulation">✨ Demo / Interactive Swarm Simulation Mode</option>
+                    </select>
+                </div>
+                <button class="btn-send" style="padding: 0.75rem;" onclick="launchCluster()">⚡ Activate Distributed Shards</button>
+            </div>
+
+        </div>
+
+        <!-- Right: Real-time Distributed Chat -->
+        <div class="card chat-container">
+            <div class="card-header">
+                <h2>💬 Neural Swarm Chat</h2>
+                <span id="speed-meter" style="font-size: 0.8rem; color: #10b981; font-family: 'JetBrains Mono', monospace;">Sharded Inference Active</span>
+            </div>
+
+            <div class="chat-messages" id="chat-box">
+                <div class="chat-bubble ai-bubble">
+                    👋 Welcome to <strong>SwarmRAM</strong>! Your cluster coordinator is live. 
+                    Have your friends double-click <code>start_worker.bat</code> on their computers to pool their RAM and expand your neural cluster capacity.
+                </div>
+            </div>
+
+            <div class="chat-input-area">
+                <input type="text" id="prompt-input" class="chat-input" placeholder="Ask anything to your distributed cluster..." onkeydown="if(event.key === 'Enter') sendPrompt()">
+                <button class="btn-send" onclick="sendPrompt()">Generate</button>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        async function refreshCluster() {
+            try {
+                const res = await fetch('/api/stats');
+                const data = await res.json();
+                
+                document.getElementById('coord-ip').innerText = data.coordinator.ip + ":" + 8080;
+                document.getElementById('stat-ram').innerText = data.total_pooled_ram_gb + " GB";
+                document.getElementById('stat-nodes').innerText = data.total_nodes;
+
+                const nodesContainer = document.getElementById('nodes-container');
+                nodesContainer.innerHTML = '';
+
+                // Coordinator Node Card
+                const coordDiv = document.createElement('div');
+                coordDiv.className = 'node-item';
+                coordDiv.innerHTML = `
+                    <div class="node-info">
+                        <h4>👑 Master Node (${data.coordinator.hostname})</h4>
+                        <p>${data.coordinator.ip} • Total: ${(data.coordinator.total_ram_mb/1024).toFixed(1)} GB</p>
+                    </div>
+                    <div class="node-badge">+${(data.coordinator.contributed_ram_mb/1024).toFixed(1)} GB Donated</div>
+                `;
+                nodesContainer.appendChild(coordDiv);
+
+                let pipelineNames = [data.coordinator.hostname];
+
+                // Worker Nodes
+                data.workers.forEach(w => {
+                    pipelineNames.push(w.hostname);
+                    const wDiv = document.createElement('div');
+                    wDiv.className = 'node-item';
+                    wDiv.innerHTML = `
+                        <div class="node-info">
+                            <h4>💻 ${w.hostname}</h4>
+                            <p>${w.worker_ip}:${w.rpc_port} • Contributed: ${(w.allocated_ram_mb/1024).toFixed(1)} GB</p>
+                        </div>
+                        <div class="node-badge" style="border-color:#10b981; color:#34d399;">+${(w.allocated_ram_mb/1024).toFixed(1)} GB RAM</div>
+                    `;
+                    nodesContainer.appendChild(wDiv);
+                });
+
+                document.getElementById('pipeline-path').innerText = "Pipeline Path: " + pipelineNames.join(" ➔ ");
+
+            } catch (e) {
+                console.error("Cluster stats polling error:", e);
+            }
+        }
+
+        async function sendPrompt() {
+            const input = document.getElementById('prompt-input');
+            const prompt = input.value.trim();
+            if (!prompt) return;
+
+            const chatBox = document.getElementById('chat-box');
+            
+            // Add user bubble
+            const uDiv = document.createElement('div');
+            uDiv.className = 'chat-bubble user-bubble';
+            uDiv.innerText = prompt;
+            chatBox.appendChild(uDiv);
+            input.value = '';
+
+            // Add placeholder AI bubble
+            const aiDiv = document.createElement('div');
+            aiDiv.className = 'chat-bubble ai-bubble';
+            aiDiv.innerText = "⏳ Computing shards across cluster nodes...";
+            chatBox.appendChild(aiDiv);
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            try {
+                const res = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({prompt: prompt})
+                });
+                const data = await res.json();
+                aiDiv.innerHTML = data.reply;
+            } catch (err) {
+                aiDiv.innerText = "[-] Error communicating with cluster: " + err;
+            }
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        function launchCluster() {
+            alert("Cluster activated! Model shards distributed across all active member nodes.");
+        }
+
+        setInterval(refreshCluster, 3000);
+        refreshCluster();
+    </script>
+</body>
+</html>

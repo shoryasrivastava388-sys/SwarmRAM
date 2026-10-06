@@ -1,0 +1,6 @@
+# SwarmRAM Dependencies
+# SwarmRAM is designed to run with ZERO mandatory external packages using Python standard library,
+# but installing these enhances system metrics reporting and speed.
+
+psutil>=5.9.0
+requests>=2.28.0

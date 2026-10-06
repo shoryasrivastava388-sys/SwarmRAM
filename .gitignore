@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+
+# SwarmRAM Models & Binaries cache
+bin/
+models/
+*.gguf
+*.bin
+*.zip
+*.tar.gz
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log
