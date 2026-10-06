@@ -27,6 +27,63 @@ Each computer holds its slice of model weights in local RAM. When a prompt runs,
 
 ---
 
+## 💻 Terminal CLI (Ollama-Style Commands)
+
+You do **not** have to use a browser or website! SwarmRAM is designed to feel just like Ollama directly inside your terminal:
+
+### 1. Check Connected Computers & Pooled RAM
+```bash
+swarm nodes
+```
+Prints a live terminal table showing every friend's PC, their IP, and total pooled memory.
+
+### 2. See Available Models
+```bash
+swarm list
+```
+Instantly detects all models on your computer — including your local Ollama models (`deepseek-r1:8b`, `qwen2.5-coder:7b`, etc.) and any `.gguf` files.
+
+### 3. Pull ANY Model (Zero Restrictions)
+```bash
+swarm pull hermes
+# or
+swarm pull qwen2.5-coder:14b
+# or download direct HuggingFace GGUF links!
+```
+
+### 4. Run Interactive Chat in the Terminal
+```bash
+swarm run qwen2.5-coder:7b
+# or
+swarm run deepseek-r1:8b
+# or
+swarm run hermes
+```
+Drops you into an interactive terminal chat with live streaming:
+```
+==================================================================
+  ⚡ SwarmRAM Terminal — qwen2.5-coder:7b (4.36 GB) ⚡
+==================================================================
+[*] Engine:   Shared RAM Cluster (7.2 GB Combined RAM)
+[*] Sharding: Model weights partitioned across network peers
+------------------------------------------------------------------
+Type your message below. Type '/exit' or 'exit' to quit.
+==================================================================
+
+>>> Explain binary search in 1 sentence
+Binary search is an efficient algorithm that finds a target in a sorted array by repeatedly dividing the search space in half.
+
+>>> 
+```
+
+### 5. How Friends Join from Terminal
+```bash
+swarm join 192.168.1.18:8080
+```
+Pops up the interactive RAM chooser menu right in their shell!
+
+---
+
 ## What Exact Steps Do Your Friends Take?
 
 Friends don't need to know anything about coding. Here is their exact 30-second walkthrough:
