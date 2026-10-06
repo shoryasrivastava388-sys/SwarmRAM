@@ -14,13 +14,19 @@ def main():
     parser = argparse.ArgumentParser(description="SwarmRAM Worker Node (Share your RAM with friends)")
     parser.add_argument("--coordinator", "-c", type=str, default=None, help="Coordinator address (e.g. 192.168.1.18:8080)")
     parser.add_argument("--port", "-p", type=int, default=DEFAULT_RPC_PORT, help=f"Port for RPC worker (default: {DEFAULT_RPC_PORT})")
-    parser.add_argument("--ram", "-m", type=int, default=None, help="Amount of RAM to donate in Megabytes (defaults to safe calculation)")
+    parser.add_argument("--ram", "-m", type=int, default=None, help="Specific amount of RAM to donate in Megabytes (skips menu)")
+    parser.add_argument(
+        "--no-interactive",
+        action="store_true",
+        help="Skip the RAM selection menu and automatically share the safe recommended amount"
+    )
     args = parser.parse_args()
 
     worker = SwarmWorker(
         coordinator_addr=args.coordinator,
         rpc_port=args.port,
-        ram_mb=args.ram
+        ram_mb=args.ram,
+        interactive=not args.no_interactive
     )
     worker.start()
 

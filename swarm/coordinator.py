@@ -10,7 +10,8 @@ from swarm.config import (
     DEFAULT_COORDINATOR_PORT,
     MODELS_DIR,
     BIN_DIR,
-    RECOMMENDED_MODELS
+    RECOMMENDED_MODELS,
+    CLUSTER_MODES
 )
 from swarm.system_info import get_full_node_specs, get_local_ip
 from swarm.binaries import find_binary, download_and_extract_binaries
@@ -40,8 +41,9 @@ class WorkerNode:
         }
 
 class SwarmCoordinator:
-    def __init__(self, port: int = DEFAULT_COORDINATOR_PORT):
+    def __init__(self, port: int = DEFAULT_COORDINATOR_PORT, mode: str = "focused"):
         self.port = port
+        self.mode = mode if mode in CLUSTER_MODES else "focused"
         self.local_specs = get_full_node_specs()
         self.workers: Dict[str, WorkerNode] = {}
         self.broadcaster: Optional[DiscoveryBroadcaster] = None
@@ -69,7 +71,7 @@ class SwarmCoordinator:
                 is_simulation=data.get("is_simulation", False)
             )
             self.workers[key] = node
-            print(f"[+] Worker joined cluster: {node.hostname} ({node.worker_ip}) contributing {node.allocated_ram_mb} MB RAM")
+            print(f"[+] Worker joined cluster: {node.hostname} ({node.worker_ip}) contributing {round(node.allocated_ram_mb / 1024, 1)} GB RAM")
         return True
 
     def record_heartbeat(self, data: dict):
@@ -94,14 +96,29 @@ class SwarmCoordinator:
                 "total_pooled_ram_mb": total_pooled,
                 "total_pooled_ram_gb": round(total_pooled / 1024.0, 2),
                 "is_inferencing": self.is_inferencing,
-                "active_model": self.active_model_path
+                "active_model": self.active_model_path,
+                "mode": self.mode,
+                "mode_info": CLUSTER_MODES.get(self.mode, {})
             }
 
+    def recommend_models(self) -> List[dict]:
+        """
+        Returns all recommended models annotated with whether the current cluster
+        has sufficient pooled RAM to run them.
+        """
+        stats = self.get_cluster_stats()
+        pooled_mb = stats["total_pooled_ram_mb"]
+        results = []
+        for model_id, info in RECOMMENDED_MODELS.items():
+            entry = dict(info)
+            entry["id"] = model_id
+            entry["can_run"] = pooled_mb >= info["recommended_cluster_ram_mb"]
+            entry["shortfall_mb"] = max(0, info["recommended_cluster_ram_mb"] - pooled_mb)
+            results.append(entry)
+        results.sort(key=lambda x: x["recommended_cluster_ram_mb"])
+        return results
+
     def get_rpc_arg_string(self) -> str:
-        """
-        Builds the comma-separated --rpc argument list for llama.cpp:
-        e.g. 192.168.1.12:50052,192.168.1.15:50052
-        """
         with self._lock:
             active = [f"{w.worker_ip}:{w.rpc_port}" for w in self.workers.values() if w.to_dict()["online"]]
             return ",".join(active)
@@ -120,9 +137,6 @@ class SwarmCoordinator:
         return found
 
     def launch_llama_cluster(self, model_filename: str) -> bool:
-        """
-        Launches the master llama-server instance connected to all worker RPC nodes.
-        """
         model_path = MODELS_DIR / model_filename
         if not model_path.is_file():
             print(f"[-] Model file not found: {model_path}")
@@ -137,9 +151,9 @@ class SwarmCoordinator:
         cmd = [
             str(binary),
             "-m", str(model_path),
-            "--host", "127.0.0.1",
+            "--host", "0.0.0.0",
             "--port", "8081",
-            "-c", "2048",
+            "-c", "4096",
         ]
         if rpc_targets:
             cmd.extend(["--rpc", rpc_targets])

@@ -1,6 +1,6 @@
 # SwarmRAM
 
-Pool the RAM from multiple computers on the same Wi-Fi and use them together to run large AI models — without buying new hardware.
+Pool the RAM from multiple computers on the same Wi-Fi and use them together to run AI models — including serious coding models like Qwen 2.5 Coder and DeepSeek.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue)](https://python.org)
@@ -8,137 +8,122 @@ Pool the RAM from multiple computers on the same Wi-Fi and use them together to 
 
 ---
 
-## Why I built this
+## The Problem & The Idea
 
-I'm in school and all the computers here have 4GB of RAM. Running even a small AI model on 4GB freezes the whole machine. But there are like 20+ computers in every lab sitting there doing nothing.
+In my school and lab, almost every computer has only **4 GB of RAM**. If you try to run any good AI model on a 4GB computer, Windows either freezes or crashes with an Out-Of-Memory error.
 
-So I thought — what if I could combine the RAM from all of them?
+Meanwhile, there are 20+ computers in the room doing nothing.
 
-Turns out you can't just merge RAM over Wi-Fi directly (the OS would lock up trying to page memory at Wi-Fi speeds). But you *can* split the AI model's layers across machines, so each computer only holds a chunk of the model. Small activation tensors (~100KB) pass between them, not gigabytes of raw memory. This is called pipeline parallelism and it's what this project does.
+You cannot "merge raw RAM" like a giant USB stick because Wi-Fi latency is too slow for the operating system. But with **pipeline parallelism**, you can shard the AI model's layers across computers:
 
-**3 friends × 4GB each = 12GB cluster. Enough to run Mistral 7B or Llama 3.**
+- Computer 1 (Your PC) runs Layers 1–8
+- Computer 2 (Friend A) runs Layers 9–16
+- Computer 3 (Friend B) runs Layers 17–24
+- Computer 4 (Friend C) runs Layers 25–32
 
----
+Each computer holds its slice of model weights in local RAM. When a prompt runs, only tiny activation tensors (~100 KB) are sent across the Wi-Fi.
 
-## How it works
-
-Each computer loads a slice of the model's neural network layers into its own local RAM once. When you type a prompt, it flows through the chain:
-
-```
-Your PC          Friend 1 PC       Friend 2 PC
-[Layers 1-8] --> [Layers 9-16] --> [Layers 17-24] --> output
-     ^                ^                  ^
-  ~1.2 GB RAM      ~1.2 GB RAM       ~1.2 GB RAM
-```
-
-Only tiny activation tensors (~100KB) travel across the network between steps. The heavy model weights stay local on each machine and never move. This is why it works fine on regular school Wi-Fi.
+**Result: 4 laptops with 4GB RAM become a 16GB AI supercomputer on school Wi-Fi.**
 
 ---
 
-## Getting started
+## What Exact Steps Do Your Friends Take?
 
-### You (the coordinator / master node)
+Friends don't need to know anything about coding. Here is their exact 30-second walkthrough:
 
-1. Clone the repo:
-   ```bash
-   git clone https://github.com/shoryasrivastava388-sys/SwarmRAM.git
-   cd SwarmRAM
-   ```
+1. **Connect to the same Wi-Fi** (or your phone's mobile hotspot).
+2. **Copy the SwarmRAM folder** onto their laptop.
+3. **Double-click `start_worker.bat`** (or run `python run_worker.py`).
+4. **Choose how much RAM to share**:  
+   A menu will pop up showing their actual free RAM:
+   - `[1] Recommended`: Safely shares ~2 GB, keeping 1.2 GB+ free so Windows and Chrome stay 100% smooth.
+   - `[2] Maximum`: Donates almost all free RAM for max cluster power.
+   - `[3] Minimum`: Donates only 512 MB if they're actively gaming or doing homework.
+   - `[4] Custom`: Type any amount in MB.
+5. **Enter Coordinator IP**: If auto-discovery doesn't find your PC, they type your IP (shown on your screen).
 
-2. Double-click `start_coordinator.bat`, or run:
-   ```bash
-   python run_coordinator.py
-   ```
+That's it! They will see:
+```
+[+] Worker is ACTIVE and sharing 2.2 GB RAM with the cluster!
+```
 
-3. Your terminal will show your local IP like `192.168.1.18`. Share that with your friends.
+---
 
-4. Open `http://localhost:8080` in a browser — that's your live cluster dashboard.
+## How Does It Actually Use Their PC?
 
-### Your friends (worker nodes)
+Your friends will probably ask: *"Is this going to slow down my laptop or mess up my files?"*
 
-They just need to clone the repo and double-click `start_worker.bat`. It will ask for your IP and connect automatically. Or they can run:
+Here is exactly what happens on their machine:
+- **No permanent files created**: The model weights exist in RAM only.
+- **Safe RAM buffer**: It always reserves at least 1.2 GB of RAM exclusively for Windows, so their laptop doesn't freeze or lag.
+- **CPU usage only during generation**: When nobody is chatting with the AI, CPU usage is **0%**. When you ask a question, their CPU computes matrix multiplications for a couple of seconds, then goes right back to idle.
+- **Instant shutdown**: The moment they press `Ctrl + C` or close the command window, all RAM is instantly freed back to their computer.
 
+---
+
+## Cluster Modes: Single Output vs. Shared Mesh
+
+You can choose how the cluster operates:
+
+### 1. Focused Mode (`--mode focused` - Default)
+All connected friends funnel their RAM to **your computer**. Only you see the output and control the prompts. Best when you need the full power of everyone's laptops to run a heavy task on your screen.
+
+### 2. Mesh Mode (`--mode mesh`)
+The model is sharded across everyone, and the web interface (`http://<your-ip>:8080`) is open to **everyone on the Wi-Fi**.
+- Friend A can type a prompt from their browser.
+- The model computes across Your PC + Friend A + Friend B.
+- Friend A gets the answer on their screen.
+- Everyone contributes RAM, and everyone gets to use the AI!
+
+---
+
+## Models You Can Run (From Small to Claude-Level Coders)
+
+You don't have to limit yourself to small 3B models. With 3 to 6 friends pooled together, you can run state-of-the-art coding assistants:
+
+| Model | Tag | File Size | Recommended Cluster RAM | What It Can Do |
+|---|---|---|---|---|
+| **Llama 3.2 1B** | General | 850 MB | 1.5 GB | Fast chat on 1 computer |
+| **Llama 3.2 3B** | General | 2.0 GB | 3.5 GB | Good general assistant (2 PCs) |
+| **Mistral 7B** | General | 4.3 GB | 6.5 GB | Great reasoning & writing (2–3 PCs) |
+| **Qwen 2.5 Coder 14B** | **Coding** | 8.5 GB | 11.0 GB | **Serious coding assistant** (3–4 PCs) |
+| **DeepSeek Coder V2 Lite 16B** | **Coding** | 10.0 GB | 12.0 GB | **Multi-file coding & reasoning** (3–4 PCs) |
+| **Codestral 22B by Mistral** | **Coding** | 13.0 GB | 16.0 GB | **Fast 32k context coding model** (4–5 PCs) |
+| **Qwen 2.5 Coder 32B** | **Coding** | 20.0 GB | 24.0 GB | **Claude 3.5 / GPT-4o level code generation** (6–8 PCs) |
+| **Llama 3.1 70B** | General | 40.0 GB | 48.0 GB | **Enterprise mega-model** across a whole computer lab (12–16 PCs) |
+
+To run any model, download its `.gguf` file from [HuggingFace](https://huggingface.co) and put it into the `models/` folder.
+
+---
+
+## Quickstart
+
+### Master Computer (You)
+Double-click `start_coordinator.bat` or run:
 ```bash
-python run_worker.py --coordinator 192.168.1.18:8080
+python run_coordinator.py --mode focused
 ```
+Then open `http://localhost:8080` in your browser.
 
-The worker figures out how much RAM is safe to share (it always keeps at least 1.2GB free so their laptop doesn't lag) and joins the cluster. Your dashboard will update in real time.
-
-### Running a model
-
-Put any `.gguf` model file in the `models/` folder, then pass it on startup:
-
+### Friend Computers (Workers)
+Double-click `start_worker.bat` or run:
 ```bash
-python run_coordinator.py --model mistral-7b-instruct-q4_k_m.gguf
-```
-
-The system will automatically spread the model layers across all connected nodes using the [llama.cpp RPC backend](https://github.com/ggerganov/llama.cpp).
-
----
-
-## Models that work well on 4GB clusters
-
-| Model | File size | Min total cluster RAM | Notes |
-|---|---|---|---|
-| Llama 3.2 1B Q4_K_M | 850 MB | 1.5 GB | Works solo on a single 4GB PC |
-| Llama 3.2 3B Q4_K_M | 2.0 GB | 3.5 GB | 2 people |
-| Qwen 2.5 3B Q4_K_M | 2.1 GB | 3.8 GB | 2 people |
-| Mistral 7B Q4_K_M | 4.3 GB | 6.5 GB | 3-4 people |
-
-Download `.gguf` files from [HuggingFace](https://huggingface.co) and drop them in `models/`.
-
----
-
-## It's not working — common fixes
-
-**"My friends can't connect"**  
-School Wi-Fi often has AP isolation which blocks devices from talking to each other. Fix: turn on a mobile hotspot on your phone, have everyone connect to that instead. No internet required for local inference.
-
-**Windows Firewall prompt**  
-When you run the coordinator for the first time, Windows Firewall will ask you to allow Python. Click "Allow access". If you missed it, run this in PowerShell as admin:
-```powershell
-New-NetFirewallRule -DisplayName "SwarmRAM" -Direction Inbound -LocalPort 8080,50052,53530 -Protocol TCP -Action Allow
-```
-
-**Auto-discovery isn't finding the coordinator**  
-UDP broadcast is sometimes blocked. That's fine — when the worker starts, just type the coordinator IP manually when it asks.
-
-**Python not found**  
-Download Python from [python.org](https://python.org). Make sure to check "Add Python to PATH" during install.
-
----
-
-## File structure
-
-```
-SwarmRAM/
-├── run_coordinator.py      # start this on YOUR computer
-├── run_worker.py           # friends run this
-├── start_coordinator.bat   # Windows double-click shortcut
-├── start_worker.bat        # Windows double-click shortcut for friends
-├── models/                 # drop .gguf model files here
-├── swarm/
-│   ├── coordinator.py      # tracks nodes, RAM pool, cluster state
-│   ├── worker.py           # runs rpc-server, sends heartbeats
-│   ├── discovery.py        # LAN auto-discovery via UDP broadcast
-│   ├── system_info.py      # reads system RAM, calculates safe budget
-│   ├── binaries.py         # finds or downloads llama.cpp binaries
-│   ├── config.py           # ports, model list, defaults
-│   └── web/
-│       ├── index.html      # dashboard UI
-│       └── server.py       # lightweight HTTP server (no Flask needed)
+python run_worker.py --coordinator <MASTER_IP>:8080
 ```
 
 ---
 
-## Requirements
+## School Wi-Fi Troubleshooting
 
-- Python 3.10 or newer (no mandatory pip packages)
-- All computers on the same Wi-Fi or LAN (or same mobile hotspot)
-- `psutil` is optional but makes RAM readings slightly more accurate
+- **School Wi-Fi has AP isolation (laptops can't ping each other)**:  
+  Turn on a **Mobile Hotspot** on your phone. Have everyone connect to it. Local inference uses **zero mobile data**!
+- **Windows Firewall popup**:  
+  Click "Allow access" for Python, or run in PowerShell (Admin):
+  ```powershell
+  New-NetFirewallRule -DisplayName "SwarmRAM" -Direction Inbound -LocalPort 8080,50052,53530 -Protocol TCP -Action Allow
+  ```
 
 ---
 
 ## License
-
-MIT — use it however you want.
+MIT — feel free to use, modify, and build on it with your friends!

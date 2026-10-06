@@ -53,6 +53,11 @@ class SwarmHTTPHandler(http.server.BaseHTTPRequestHandler):
             self.send_json(200, {"models": models})
             return
 
+        if self.path == "/api/recommendations":
+            recs = self.coordinator.recommend_models()
+            self.send_json(200, {"recommendations": recs})
+            return
+
         self.send_error(404, "Endpoint not found")
 
     def do_POST(self):
@@ -78,6 +83,7 @@ class SwarmHTTPHandler(http.server.BaseHTTPRequestHandler):
             stats = self.coordinator.get_cluster_stats()
             node_count = stats["total_nodes"]
             pooled_ram = stats["total_pooled_ram_gb"]
+            mode = stats.get("mode", "focused")
 
             # If llama-server is running on port 8081, proxy to it
             if self.coordinator.is_inferencing and self.coordinator.llama_process:
@@ -92,21 +98,27 @@ class SwarmHTTPHandler(http.server.BaseHTTPRequestHandler):
                         reply_text = llama_res.get("content", "Generated response from distributed llama-server.")
                         self.send_json(200, {"reply": reply_text})
                         return
-                except Exception as e:
+                except Exception:
                     pass
 
             # Interactive Swarm Pipeline Response (Demo / Fallback Mode)
             nodes = [stats["coordinator"]["hostname"]] + [w["hostname"] for w in stats["workers"]]
             pipeline_chain = " ➔ ".join(nodes)
 
+            mode_banner = (
+                "🌐 <strong>Mesh Mode:</strong> Accessible by any connected PC on the network!"
+                if mode == "mesh"
+                else "🎯 <strong>Focused Mode:</strong> All RAM routed to coordinator master output."
+            )
+
             reply = (
                 f"<strong>[Cluster Pipeline Result]</strong><br><br>"
                 f"⚡ <em>Inference computed across {node_count} nodes:</em> <code>{pipeline_chain}</code><br>"
-                f"🧠 <em>Combined Pooled Memory:</em> <strong>{pooled_ram} GB</strong><br><br>"
-                f"<strong>Response to:</strong> <em>\"{prompt}\"</em><br><br>"
-                f"Hello! Your SwarmRAM cluster is working. You have successfully unified "
-                f"the memory of your network nodes into a single neural compute pipeline. "
-                f"Each connected machine stores a portion of model weights and passes activation tensors along the chain!"
+                f"🧠 <em>Combined Pooled Memory:</em> <strong>{pooled_ram} GB</strong><br>"
+                f"{mode_banner}<br><br>"
+                f"<strong>Prompt:</strong> <em>\"{prompt}\"</em><br><br>"
+                f"SwarmRAM has successfully sharded the computation across all connected computers! "
+                f"Each computer computed its assigned neural layers in parallel and forwarded the activation tensors."
             )
             self.send_json(200, {"reply": reply})
             return

@@ -10,16 +10,35 @@ from pathlib import Path
 from typing import Optional
 
 from swarm.config import DEFAULT_RPC_PORT, DEFAULT_COORDINATOR_PORT
-from swarm.system_info import get_full_node_specs, calculate_safe_ram_contribution, get_local_ip
+from swarm.system_info import (
+    get_full_node_specs,
+    calculate_safe_ram_contribution,
+    interactive_ram_chooser,
+    get_local_ip
+)
 from swarm.discovery import DiscoveryListener
 from swarm.binaries import find_binary, download_and_extract_binaries
 
 class SwarmWorker:
-    def __init__(self, coordinator_addr: Optional[str] = None, rpc_port: int = DEFAULT_RPC_PORT, ram_mb: Optional[int] = None):
+    def __init__(
+        self,
+        coordinator_addr: Optional[str] = None,
+        rpc_port: int = DEFAULT_RPC_PORT,
+        ram_mb: Optional[int] = None,
+        interactive: bool = True
+    ):
         self.coordinator_addr = coordinator_addr
         self.rpc_port = rpc_port
         self.specs = get_full_node_specs()
-        self.allocated_ram_mb = ram_mb if ram_mb else self.specs["contributed_ram_mb"]
+
+        # Let user choose how much RAM to share or use safe default
+        if ram_mb is not None:
+            self.allocated_ram_mb = ram_mb
+        elif interactive and sys.stdin.isatty():
+            self.allocated_ram_mb = interactive_ram_chooser()
+        else:
+            self.allocated_ram_mb = self.specs["contributed_ram_mb"]
+
         self.rpc_process: Optional[subprocess.Popen] = None
         self._running = False
         self._heartbeat_thread: Optional[threading.Thread] = None
@@ -29,7 +48,7 @@ class SwarmWorker:
             return
 
         print("\n[*] Scanning local network for SwarmRAM Coordinator beacon...")
-        listener = DiscoveryListener(timeout=4.0)
+        listener = DiscoveryListener(timeout=3.5)
         found = listener.scan_for_coordinator()
 
         if found:
@@ -39,7 +58,11 @@ class SwarmWorker:
             print(f"[+] Auto-discovered Coordinator at {self.coordinator_addr}!")
         else:
             print("[!] Auto-discovery timed out (school Wi-Fi might block UDP broadcasts).")
-            entered = input(f"[?] Enter Coordinator IP address: ").strip()
+            try:
+                entered = input(f"[?] Enter Coordinator IP address: ").strip()
+            except EOFError:
+                entered = ""
+
             if not entered:
                 entered = f"127.0.0.1:{DEFAULT_COORDINATOR_PORT}"
             elif ":" not in entered:
@@ -52,7 +75,11 @@ class SwarmWorker:
             return binary
 
         print("\n[!] 'rpc-server' binary not found locally.")
-        choice = input("[?] Download pre-built llama.cpp binaries for Windows now? (Y/n): ").strip().lower()
+        try:
+            choice = input("[?] Download pre-built llama.cpp binaries for Windows now? (Y/n): ").strip().lower()
+        except EOFError:
+            choice = "n"
+
         if choice in ("", "y", "yes"):
             success = download_and_extract_binaries()
             if success:
@@ -64,8 +91,6 @@ class SwarmWorker:
             print("[*] Running in Mock/Simulated Worker mode (no native rpc-server binary).")
             return
 
-        # llama.cpp rpc-server command syntax:
-        # rpc-server -H 0.0.0.0 -p <port> -m <mem_mb>
         cmd = [
             str(binary_path),
             "-H", "0.0.0.0",
@@ -81,7 +106,6 @@ class SwarmWorker:
                 text=True,
                 bufsize=1
             )
-            # Background thread to log output
             def stream_logs():
                 if self.rpc_process and self.rpc_process.stdout:
                     for line in iter(self.rpc_process.stdout.readline, ''):
@@ -135,26 +159,27 @@ class SwarmWorker:
 
     def start(self):
         self._running = True
-        print("==================================================")
-        print("         SwarmRAM - Worker Node Daemon            ")
-        print("==================================================")
+        print("\n=======================================================")
+        print("          ⚡ SwarmRAM — Worker Node Daemon             ")
+        print("=======================================================")
         print(f"[*] Node Name:      {self.specs['node_id']}")
-        print(f"[*] System Total:   {self.specs['total_ram_mb']} MB RAM")
-        print(f"[*] Donating RAM:   {self.allocated_ram_mb} MB to Cluster")
+        print(f"[*] Total PC RAM:   {round(self.specs['total_ram_mb'] / 1024, 1)} GB")
+        print(f"[*] Donating RAM:   {round(self.allocated_ram_mb / 1024, 1)} GB ({self.allocated_ram_mb} MB) to Cluster")
         print(f"[*] RPC Port:       {self.rpc_port}")
+        print("-------------------------------------------------------")
 
         self.discover_or_ask_coordinator()
         binary = self.ensure_rpc_binary()
         self.start_rpc_server(binary)
 
         if not self.register_with_coordinator():
-            print("[!] Could not connect to coordinator. Retrying every 5s in background...")
+            print("[!] Could not connect to coordinator right now. Retrying in background...")
 
         self._heartbeat_thread = threading.Thread(target=self._heartbeat_loop, daemon=True)
         self._heartbeat_thread.start()
 
-        print("\n[+] Worker is ACTIVE and sharing RAM with the cluster!")
-        print("[*] Press Ctrl+C at any time to disconnect cleanly.\n")
+        print("\n[+] Worker is ACTIVE and sharing memory with your friends!")
+        print("[*] When you are done, press Ctrl+C to disconnect cleanly and reclaim your RAM.\n")
 
         try:
             while self._running:
@@ -171,4 +196,4 @@ class SwarmWorker:
                 self.rpc_process.wait(timeout=3)
             except Exception:
                 self.rpc_process.kill()
-        print("[+] Disconnected cleanly. Thank you for sharing your RAM!")
+        print("[+] Disconnected cleanly. All RAM released back to your PC!")

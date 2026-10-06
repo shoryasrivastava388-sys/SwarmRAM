@@ -1,7 +1,14 @@
 @echo off
 title SwarmRAM - Worker Node (Share Your RAM)
 echo ========================================================
-echo        Starting SwarmRAM Worker Node                   
+echo        ⚡ SwarmRAM — Sharing RAM With Your Friends ⚡    
+echo ========================================================
+echo  This lets your computer donate a slice of free RAM to 
+echo  your friend's cluster so you can run AI models together.
+echo.
+echo  * You choose exactly how much RAM to share.
+echo  * It leaves 1.2 GB+ free so your PC stays completely smooth.
+echo  * Press Ctrl+C at any time to instantly reclaim your RAM.
 echo ========================================================
 echo.
 

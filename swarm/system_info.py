@@ -68,7 +68,6 @@ def get_local_ip() -> str:
     """
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
-        # Doesn't actually send packets over the internet, but queries OS routing table
         s.connect(("8.8.8.8", 80))
         ip = s.getsockname()[0]
     except Exception:
@@ -89,7 +88,6 @@ def calculate_safe_ram_contribution(reserve_mb: int = 1200) -> int:
     the host system responsive.
     """
     total_mb, avail_mb = get_system_ram_mb()
-    # Allow at most (total - reserve_mb), but bounded by current available RAM
     safe_max = max(512, total_mb - reserve_mb)
     safe_budget = min(safe_max, int(avail_mb * 0.85))
     return max(512, safe_budget)
@@ -106,3 +104,51 @@ def get_full_node_specs(reserve_mb: int = 1200) -> Dict:
         "available_ram_mb": avail_mb,
         "contributed_ram_mb": contribution_mb
     }
+
+def interactive_ram_chooser(reserve_mb: int = 1200) -> int:
+    """
+    Shows the user their PC RAM stats and lets them choose how much to share.
+    Returns the chosen amount in Megabytes.
+    """
+    total_mb, avail_mb = get_system_ram_mb()
+    safe_default = calculate_safe_ram_contribution(reserve_mb)
+    max_share = max(512, avail_mb - 600)
+    
+    print("\n---------------------------------------------------------")
+    print("           📊 Your PC Memory Contribution Options        ")
+    print("---------------------------------------------------------")
+    print(f"[*] Total Installed RAM:  {round(total_mb / 1024, 1)} GB ({total_mb} MB)")
+    print(f"[*] Currently Free:       {round(avail_mb / 1024, 1)} GB ({avail_mb} MB)")
+    print(f"[*] Reserved for Windows: ~{round(reserve_mb / 1024, 1)} GB (keeps your computer smooth)")
+    print("---------------------------------------------------------")
+    print(f"  [1] Recommended: {round(safe_default / 1024, 1)} GB ({safe_default} MB)  <-- Best balance")
+    print(f"  [2] Maximum:     {round(max_share / 1024, 1)} GB ({max_share} MB)  <-- Maximum power for cluster")
+    print(f"  [3] Minimum:     0.5 GB (512 MB)        <-- Lightest background impact")
+    print(f"  [4] Custom:      Type your own amount in MB")
+    print("---------------------------------------------------------")
+    
+    try:
+        choice = input("[?] Choose [1/2/3/4] (press Enter for Recommended): ").strip()
+    except EOFError:
+        choice = "1"
+
+    if choice == "2":
+        chosen = max_share
+        print(f"[+] Selected Maximum: {round(chosen / 1024, 1)} GB ({chosen} MB)")
+    elif choice == "3":
+        chosen = 512
+        print(f"[+] Selected Minimum: 0.5 GB (512 MB)")
+    elif choice == "4":
+        try:
+            custom_input = input("[?] Enter RAM to donate in MB (e.g. 2000): ").strip()
+            custom_val = int(custom_input)
+            chosen = max(256, min(custom_val, avail_mb - 300))
+            print(f"[+] Selected Custom: {round(chosen / 1024, 1)} GB ({chosen} MB)")
+        except Exception:
+            chosen = safe_default
+            print(f"[!] Invalid input. Using Recommended: {round(chosen / 1024, 1)} GB ({chosen} MB)")
+    else:
+        chosen = safe_default
+        print(f"[+] Selected Recommended: {round(chosen / 1024, 1)} GB ({chosen} MB)")
+
+    return chosen
