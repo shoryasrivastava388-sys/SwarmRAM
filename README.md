@@ -61,7 +61,7 @@ Instead of transferring raw memory bytes, SwarmRAM partitions the **neural netwo
 ### 1. Setup Coordinator (Your Computer)
 Clone the repository:
 ```bash
-git clone https://github.com/your-username/SwarmRAM.git
+git clone https://github.com/shoryasrivastava388-sys/SwarmRAM.git
 cd SwarmRAM
 ```
 
