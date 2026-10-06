@@ -115,7 +115,7 @@ def interactive_ram_chooser(reserve_mb: int = 1200) -> int:
     max_share = max(512, avail_mb - 600)
     
     print("\n---------------------------------------------------------")
-    print("           📊 Your PC Memory Contribution Options        ")
+    print("           [*] Your PC Memory Contribution Options       ")
     print("---------------------------------------------------------")
     print(f"[*] Total Installed RAM:  {round(total_mb / 1024, 1)} GB ({total_mb} MB)")
     print(f"[*] Currently Free:       {round(avail_mb / 1024, 1)} GB ({avail_mb} MB)")

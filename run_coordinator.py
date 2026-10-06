@@ -3,6 +3,12 @@ import sys
 import threading
 from pathlib import Path
 
+# Ensure UTF-8 / safe output on Windows console
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+if hasattr(sys.stderr, 'reconfigure'):
+    sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+
 # Add project root to sys.path
 PROJECT_ROOT = Path(__file__).resolve().parent
 if str(PROJECT_ROOT) not in sys.path:
@@ -31,13 +37,13 @@ def main():
     mode_info = CLUSTER_MODES.get(args.mode, {})
 
     print("==================================================================")
-    print("       ⚡ SwarmRAM — Neural Memory Cluster Coordinator ⚡         ")
+    print("       [+] SwarmRAM - Neural Memory Cluster Coordinator [+]       ")
     print("==================================================================")
     print(f"[*] Hostname:         {specs['hostname']}")
     print(f"[*] Local LAN IP:     {local_ip}")
     print(f"[*] Local System RAM: {round(specs['total_ram_mb'] / 1024, 1)} GB (Donating {round(specs['contributed_ram_mb'] / 1024, 1)} GB)")
     print(f"[*] Cluster Mode:     {mode_info.get('name', args.mode).upper()}")
-    print(f"    ↳ {mode_info.get('description', '')}")
+    print(f"    -> {mode_info.get('description', '')}")
     print(f"[*] Web Dashboard:    http://localhost:{args.port}  or  http://{local_ip}:{args.port}")
     print("------------------------------------------------------------------")
     print("[*] Tell your friends on the same Wi-Fi / Hotspot to run:")

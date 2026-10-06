@@ -160,7 +160,7 @@ class SwarmWorker:
     def start(self):
         self._running = True
         print("\n=======================================================")
-        print("          ⚡ SwarmRAM — Worker Node Daemon             ")
+        print("          [+] SwarmRAM - Worker Node Daemon [+]        ")
         print("=======================================================")
         print(f"[*] Node Name:      {self.specs['node_id']}")
         print(f"[*] Total PC RAM:   {round(self.specs['total_ram_mb'] / 1024, 1)} GB")
